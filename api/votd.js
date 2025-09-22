@@ -1,24 +1,78 @@
-export default async function handler(req, res) {
-  try {
-    const bibleId = process.env.API_BIBLE; // example: "de4e12af7f28f599-02"
-    const verseId = "JHN.3.16"; // John 3:16 as a test
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Dude.</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500&family=Libre+Baskerville:ital@0;1&display=swap" rel="stylesheet">
+  <style>
+    :root { --ink:#1a1a1a; --muted:#6b6b6b; }
+    html,body{height:100%}
+    body{
+      margin:0;background:#fff;color:var(--ink);
+      font-family:"Libre Baskerville", Georgia, serif;
+      display:flex;align-items:center;justify-content:center;padding:24px
+    }
+    .sheet{
+      width:100%;max-width:680px;border:1px solid #ededed;border-radius:12px;
+      padding:clamp(20px,4vw,48px);box-shadow:0 1px 0 rgba(0,0,0,.03)
+    }
+    h1{
+      font-family:"Playfair Display", Georgia, serif;font-weight:500;letter-spacing:.02em;
+      font-size:clamp(40px,10vw,72px);line-height:1;text-align:center;margin:0 0 28px
+    }
+    .verse{font-size:clamp(16px,2.8vw,20px);line-height:1.7;margin:0 auto 14px;max-width:50ch;text-align:center}
+    .ref{text-align:center;color:var(--muted);font-style:italic;margin-bottom:28px}
+    .fine{display:flex;gap:.5rem;justify-content:center;color:var(--muted);font-size:13px;letter-spacing:.02em}
+    .fine .dot::before{content:"•";margin:0 .25rem}
+    .copy{text-align:center;margin-top:16px;font-size:12px;color:#9a9a9a}
+    button{display:block;margin:10px auto 0;font-size:12px;padding:.45rem .7rem;border:1px solid #dcdcdc;border-radius:8px;background:#fafafa}
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    <h1>Dude.</h1>
+    <p id="text" class="verse">Loading verse…</p>
+    <p id="ref" class="ref"></p>
+    <div class="fine"><span id="date"></span><span class="dot"></span><span>Connect with God</span></div>
+    <div class="copy">
+      <button id="copyBtn" hidden>Copy verse</button>
+      <div id="msg"></div>
+    </div>
+  </main>
 
-    const response = await fetch(
-      `https://api.scripture.api.bible/v1/bibles/${bibleId}/verses/${verseId}`,
-      {
-        headers: {
-          "api-key": process.env.API_BIBLE_KEY,
-        },
+  <script>
+    // Show date like MM.DD.YY
+    (function(){
+      const d=new Date(), mm=String(d.getMonth()+1).padStart(2,"0"),
+            dd=String(d.getDate()).padStart(2,"0"),
+            yy=String(d.getFullYear()%100).padStart(2,"0");
+      document.getElementById('date').textContent=`${mm}.${dd}.${yy}`;
+    })();
+
+    // Fetch Verse of the Day directly (no keys needed)
+    (async () => {
+      try {
+        const r = await fetch("https://beta.ourmanna.com/api/v1/get/?format=json", { cache:"no-store" });
+        const j = await r.json();
+        const details = j?.verse?.details;
+        if (!details?.text) throw new Error("No verse returned");
+        document.getElementById('text').textContent = details.text;
+        document.getElementById('ref').textContent  = details.reference;
+
+        const btn=document.getElementById('copyBtn'); 
+        btn.hidden=false;
+        btn.onclick = async () => {
+          try { 
+            await navigator.clipboard.writeText(`${details.reference} — ${details.text}`); 
+            document.getElementById('msg').textContent='Copied!'; 
+          } catch {}
+        };
+      } catch (e) {
+        document.getElementById('text').textContent = "Sorry—unable to load today’s verse.";
+        document.getElementById('ref').textContent  = "";
       }
-    );
-
-    const data = await response.json();
-
-    res.status(200).json({
-      reference: data.data.reference,
-      text: data.data.content, // full verse HTML text
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-}
+    })();
+  </script>
+</body>
+</html>
