@@ -26,7 +26,7 @@
   <h1>Dude.</h1>
   <p id="text" class="verse">Loading verse…</p>
   <p id="ref" class="ref"></p>
-  <div class="fine"><span id="date"></span><span class="dot"></span><span>Connect with God</span></div>
+<div class="fine">Connect with God</div>
   <div class="copy">
     <button id="copyBtn" hidden>Copy verse</button>
     <div id="msg"></div>
@@ -35,12 +35,12 @@
 
 <script>
   // Show date like MM.DD.YY
-  (function(){
-    const d=new Date(),mm=String(d.getMonth()+1).padStart(2,"0"),
-          dd=String(d.getDate()).padStart(2,"0"),
-          yy=String(d.getFullYear()%100).padStart(2,"0");
-    document.getElementById('date').textContent=`${mm}.${dd}.${yy}`;
-  })();
+ (function(){
+  const d=new Date(),mm=String(d.getMonth()+1).padStart(2,"0"),
+        dd=String(d.getDate()).padStart(2,"0"),
+        yy=String(d.getFullYear()%100).padStart(2,"0");
+  document.getElementById('date').textContent=`${mm}.${dd}.${yy}`;
+})();
 
   // Small rotating list of references (add more anytime)
   const refs = [
