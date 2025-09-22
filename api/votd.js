@@ -1,37 +1,49 @@
-// Simpler, more reliable version: directly fetch a known verse by reference.
-// Once this shows the verse on the page, we can switch to the daily-rotation plan.
-
+// /api/votd — robust version that works with API.Bible
 export default async function handler(req, res) {
   try {
     const API_KEY  = process.env.API_BIBLE_KEY; // set in Vercel
-    const BIBLE_ID = process.env.API_BIBLE_ID;  // set in Vercel (e.g., de4e12af7f28f599-02 for KJV)
+    const BIBLE_ID = process.env.API_BIBLE_ID;  // e.g., KJV: de4e12af7f28f599-02
     if (!API_KEY || !BIBLE_ID) {
-      return res.status(500).json({ error: "Server not configured (missing env vars)." });
+      return res.status(500).json({ error: "Missing API_BIBLE_KEY or API_BIBLE_ID." });
     }
 
-    // Start with a single verse to prove it works:
-    const verseRef = "JHN.3.16";
+    // Start with a known reference; once this works we’ll rotate daily
+    const reference = "John 3:16";
 
-    // Ask API.Bible for plain text
-    const url = `https://api.scripture.api.bible/v1/bibles/${BIBLE_ID}/verses/${verseRef}?contentType=text&includeVerseNumbers=false&includeFootnotes=false&includeTitles=false&includeChapterNumbers=false`;
+    // 1) Resolve the reference to an internal id
+    const searchUrl = `https://api.scripture.api.bible/v1/bibles/${BIBLE_ID}/search?query=${encodeURIComponent(reference)}&limit=1`;
+    const s = await fetch(searchUrl, { headers: { "api-key": API_KEY } });
+    if (!s.ok) {
+      const t = await s.text();
+      return res.status(500).json({ error: `Search failed: ${s.status} ${t}` });
+    }
+    const sj = await s.json();
+    const verseId = sj?.data?.verses?.[0]?.id || sj?.data?.passages?.[0]?.id;
+    if (!verseId) {
+      return res.status(500).json({ error: "Could not resolve verse id from search." });
+    }
 
-    const r = await fetch(url, { headers: { "api-key": API_KEY } });
-    const j = await r.json();
+    // 2) Fetch the passage text
+    const passUrl = `https://api.scripture.api.bible/v1/bibles/${BIBLE_ID}/passages/${verseId}?contentType=text&includeVerseNumbers=false&includeFootnotes=false&includeTitles=false&includeChapterNumbers=false`;
+    const p = await fetch(passUrl, { headers: { "api-key": API_KEY } });
+    if (!p.ok) {
+      const t = await p.text();
+      return res.status(500).json({ error: `Passage fetch failed: ${p.status} ${t}` });
+    }
+    const pj = await p.json();
 
-    // Some translations return HTML even with contentType=text, so strip tags just in case.
-    const raw = (j?.data?.content || "").trim();
+    const raw = (pj?.data?.content || "").trim();
     const text = raw.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+    const refOut = pj?.data?.reference || reference;
 
     if (!text) {
-      return res.status(500).json({ error: "Verse text was empty." });
+      return res.status(500).json({ error: "Verse text was empty after fetch." });
     }
 
-    return res.status(200).json({
-      reference: j?.data?.reference || "John 3:16",
-      text,
-      translationId: BIBLE_ID
-    });
+    // Cache for an hour
+    res.setHeader("Cache-Control", "public, s-maxage=3600, stale-while-revalidate=600");
+    return res.status(200).json({ reference: refOut, text, translationId: BIBLE_ID });
   } catch (e) {
-    return res.status(500).json({ error: "Failed to load verse." });
+    return res.status(500).json({ error: "Unexpected server error." });
   }
 }
