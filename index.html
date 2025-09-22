@@ -7,41 +7,26 @@
   <style>
     :root{--ink:#1a1a1a;--muted:#6b6b6b}
     html,body{height:100%}
-    body{
-      margin:0;background:#fff;color:var(--ink);font-family:Georgia,serif;
-      display:flex;align-items:center;justify-content:center;padding:24px
-    }
-    .sheet{
-      width:100%;max-width:680px;border:1px solid #ededed;border-radius:12px;
-      padding:clamp(20px,4vw,48px);box-shadow:0 1px 0 rgba(0,0,0,.03)
-    }
-    h1{
-      font-weight:600;letter-spacing:.02em;font-size:clamp(40px,10vw,72px);
-      line-height:1;text-align:center;margin:0 0 28px;font-family:Times,Georgia,serif
-    }
-    .verse{
-      font-size:clamp(16px,2.8vw,20px);line-height:1.7;margin:0 auto 14px;
-      max-width:60ch;text-align:center
-    }
-    .ref{ text-align:center;color:var(--muted);font-style:italic;margin-bottom:28px }
-    .fine{ display:flex;gap:.5rem;justify-content:center;color:var(--muted);font-size:13px;letter-spacing:.02em }
-    .copy{ text-align:center;margin-top:16px;font-size:12px;color:#9a9a9a }
-    button{
-      display:block;margin:10px auto 0;font-size:12px;padding:.45rem .7rem;
-      border:1px solid #dcdcdc;border-radius:8px;background:#fafafa;cursor:pointer
-    }
-    button:active{ transform:translateY(1px) }
+    body{margin:0;background:#fff;color:var(--ink);font-family:Georgia,serif;
+         display:flex;align-items:center;justify-content:center;padding:24px}
+    .sheet{width:100%;max-width:680px;border:1px solid #ededed;border-radius:12px;
+           padding:clamp(20px,4vw,48px);box-shadow:0 1px 0 rgba(0,0,0,.03)}
+    h1{font-weight:600;letter-spacing:.02em;font-size:clamp(40px,10vw,72px);
+       line-height:1;text-align:center;margin:0 0 28px;font-family:Times,Georgia,serif}
+    .verse{font-size:clamp(16px,2.8vw,20px);line-height:1.7;margin:0 auto 14px;max-width:60ch;text-align:center}
+    .ref{text-align:center;color:var(--muted);font-style:italic;margin-bottom:28px}
+    .fine{display:flex;gap:.5rem;justify-content:center;color:var(--muted);font-size:13px;letter-spacing:.02em}
+    .fine .dot::before{content:"•";margin:0 .25rem}
+    .copy{text-align:center;margin-top:16px;font-size:12px;color:#9a9a9a}
+    button{display:block;margin:10px auto 0;font-size:12px;padding:.45rem .7rem;border:1px solid #dcdcdc;border-radius:8px;background:#fafafa}
   </style>
 </head>
 <body>
 <main class="sheet">
   <h1>Dude.</h1>
-
-  <p id="text" class="verse">Loading verse...</p>
-  <p id="ref"  class="ref"></p>
-
+  <p id="text" class="verse">Loading verse…</p>
+  <p id="ref" class="ref"></p>
   <div class="fine">Connect with God</div>
-
   <div class="copy">
     <button id="copyBtn" hidden>Copy verse</button>
     <div id="msg"></div>
@@ -49,7 +34,7 @@
 </main>
 
 <script>
-  // ---- Daily reference list (deterministic pick) ----
+  // List of verse references (add until you reach ~366 for full year coverage)
   const refs = [
     "John 3:16","Psalm 23:1","Proverbs 3:5-6","Romans 8:28","Philippians 4:6-7",
     "Isaiah 41:10","Jeremiah 29:11","Matthew 11:28","Ephesians 2:8-9","Psalm 46:1",
@@ -57,58 +42,62 @@
     "James 1:5","1 Peter 5:7","2 Corinthians 5:17","Romans 12:2","Psalm 27:1",
     "Galatians 2:20","Psalm 91:1-2","Romans 10:9","Micah 6:8","John 14:6",
     "Colossians 3:23","Matthew 5:16","Psalm 34:8","1 John 4:18","Psalm 121:1-2"
+    // keep adding more here!
   ];
-  function todaysRef(){
-    const d=new Date();
-    const n=Math.floor((Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())-Date.UTC(d.getFullYear(),0,0))/86400000);
-    return refs[n % refs.length];
+
+  // Day-of-year (1..366)
+  function dayOfYear() {
+    const d = new Date();
+    return Math.floor(
+      (Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) -
+       Date.UTC(d.getFullYear(), 0, 0)) / 86400000
+    );
   }
 
-  // ---- Public-domain KJV fallback (for a few common refs) ----
+  // Deterministic pick: verse of the day without looping (until refs run out)
+  function todaysRef() {
+    const day = dayOfYear();      // 1..366
+    return refs[day - 1] || refs[refs.length - 1];
+  }
+
+  // Fallback snippets for common verses
   const fallback = {
-    "John 3:16":"For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.",
-    "Psalm 23:1":"The LORD is my shepherd; I shall not want.",
-    "Proverbs 3:5-6":"Trust in the LORD with all thine heart; and lean not unto thine own understanding. In all thy ways acknowledge him, and he shall direct thy paths.",
-    "Romans 8:28":"And we know that all things work together for good to them that love God, to them who are the called according to his purpose.",
-    "Philippians 4:6-7":"Be careful for nothing; but in every thing by prayer and supplication with thanksgiving let your requests be made known unto God. And the peace of God, which passeth all understanding, shall keep your hearts and minds through Christ Jesus.",
-    "Isaiah 41:10":"Fear thou not; for I am with thee: be not dismayed; for I am thy God: I will strengthen thee; yea, I will help thee; yea, I will uphold thee with the right hand of my righteousness.",
-    "Jeremiah 29:11":"For I know the thoughts that I think toward you, saith the LORD, thoughts of peace, and not of evil, to give you an expected end.",
-    "Matthew 11:28":"Come unto me, all ye that labour and are heavy laden, and I will give you rest.",
-    "Ephesians 2:8-9":"For by grace are ye saved through faith; and that not of yourselves: it is the gift of God: not of works, lest any man should boast.",
-    "Psalm 46:1":"God is our refuge and strength, a very present help in trouble."
+    "John 3:16": "For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.",
+    "Psalm 23:1": "The LORD is my shepherd; I shall not want.",
+    "Proverbs 3:5-6": "Trust in the LORD with all thine heart; and lean not unto thine own understanding. In all thy ways acknowledge him, and he shall direct thy paths.",
+    "Romans 8:28": "And we know that all things work together for good to them that love God, to them who are the called according to his purpose.",
+    "Philippians 4:6-7": "Be careful for nothing; but in every thing by prayer and supplication with thanksgiving let your requests be made known unto God. And the peace of God, which passeth all understanding, shall keep your hearts and minds through Christ Jesus.",
+    "Isaiah 41:10": "Fear thou not; for I am with thee: be not dismayed; for I am thy God: I will strengthen thee; yea, I will help thee; yea, I will uphold thee with the right hand of my righteousness.",
+    "Jeremiah 29:11": "For I know the thoughts that I think toward you, saith the LORD, thoughts of peace, and not of evil, to give you an expected end.",
+    "Matthew 11:28": "Come unto me, all ye that labour and are heavy laden, and I will give you rest.",
+    "Ephesians 2:8-9": "For by grace are ye saved through faith; and that not of yourselves: it is the gift of God: not of works, lest any man should boast.",
+    "Psalm 46:1": "God is our refuge and strength, a very present help in trouble."
   };
 
-  async function showVerse(){
+  async function showVerse() {
     const ref = todaysRef();
-    const textEl = document.getElementById('text');
-    const refEl  = document.getElementById('ref');
+    document.getElementById('ref').textContent = ref + " (KJV)";
 
-    // Try a simple public endpoint first
-    try{
-      const url = "https://bible-api.com/"+encodeURIComponent(ref)+"?translation=kjv";
-      const r = await fetch(url,{cache:"no-store"});
-      if(!r.ok) throw new Error("bad status");
+    try {
+      const url = "https://bible-api.com/" + encodeURIComponent(ref) + "?translation=kjv";
+      const r = await fetch(url, { cache:"no-store" });
+      if (!r.ok) throw new Error("fetch failed");
       const j = await r.json();
-      const text = (j.text||"").replace(/\s+/g," ").trim();
-      if(!text) throw new Error("empty");
-      textEl.textContent = text;
-      refEl.textContent  = `${ref} (KJV)`;
-    }catch{
-      // Fallback text
-      textEl.textContent = fallback[ref] || "Unable to load verse text.";
-      refEl.textContent  = `${ref} (KJV)`;
+      const text = (j.text || "").replace(/\s+/g," ").trim();
+      if (!text) throw new Error("empty");
+      document.getElementById('text').textContent = text;
+    } catch {
+      const text = fallback[ref] || "Unable to load verse text.";
+      document.getElementById('text').textContent = text;
     }
 
-    // Copy button
-    const btn = document.getElementById('copyBtn');
-    const msg = document.getElementById('msg');
-    btn.hidden = false;
-    btn.onclick = async ()=>{
-      try{
-        await navigator.clipboard.writeText(`${textEl.textContent} — ${refEl.textContent}`);
-        msg.textContent = "Copied!";
-        setTimeout(()=>msg.textContent="",1200);
-      }catch{}
+    const btn=document.getElementById('copyBtn'); 
+    btn.hidden=false;
+    btn.onclick = async () => {
+      try { 
+        await navigator.clipboard.writeText(`${document.getElementById('ref').textContent} — ${document.getElementById('text').textContent}`); 
+        document.getElementById('msg').textContent='Copied!'; 
+      } catch {}
     };
   }
 
